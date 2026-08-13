@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Octant 3D MAP — 連続値対応版</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0c;
+    --panel: #131316;
+    --panel-border: #26221c;
+    --gold: #c9a458;
+    --gold-dim: #8a6f3a;
+    --text: #e8e4da;
+    --text-dim: #8a8578;
+    --line: #2a2620;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: 'DM Mono', monospace; overflow: hidden; height: 100%; }
+  #scene { position: fixed; inset: 0; }
+  #labels { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+  #ui { position: fixed; top: 0; right: 0; width: 340px; max-width: 92vw; height: 100%;
+    background: linear-gradient(180deg, var(--panel), #0e0e10);
+    border-left: 1px solid var(--panel-border);
+    padding: 22px 20px 20px; overflow-y: auto; z-index: 10; }
+  #ui-handle { display: none; }
+
+  @media (max-width: 700px) {
+    #ui {
+      top: auto; bottom: 0; left: 0; right: 0; width: 100%; max-width: 100%;
+      height: 72vh; border-left: none; border-top: 1px solid var(--panel-border);
+      border-radius: 16px 16px 0 0; padding: 0 18px 16px;
+      transform: translateY(calc(100% - 46px));
+      transition: transform .28s cubic-bezier(.2,.8,.2,1);
+    }
+    #ui.open { transform: translateY(0); }
+    #ui-handle {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      height: 46px; margin: 0 -18px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    #ui-handle .bar { width: 34px; height: 3px; border-radius: 2px; background: var(--gold-dim); }
+    #ui-handle .htext { font-size: 11px; color: var(--gold-dim); letter-spacing: .04em; }
+    #ui > h1, #ui > .sub, #ui > .axis-block, #ui > #classification,
+    #ui > #add-btn, #ui > #clear-btn, #ui > #points-list, #ui > #legend {
+      display: none;
+    }
+    #ui.open > h1, #ui.open > .sub, #ui.open > .axis-block, #ui.open > #classification,
+    #ui.open > #add-btn, #ui.open > #clear-btn, #ui.open > #points-list, #ui.open > #legend {
+      display: block;
+    }
+  }
+  h1 { font-family: 'Noto Serif JP', serif; font-weight: 700; font-size: 17px;
+    color: var(--gold); margin: 0 0 4px; letter-spacing: .02em; }
+  .sub { font-size: 11px; color: var(--text-dim); margin-bottom: 18px; line-height: 1.6; }
+  .axis-block { border-top: 1px solid var(--line); padding: 14px 0; }
+  .axis-name { font-family: 'Noto Serif JP', serif; font-size: 13px; color: var(--text); margin-bottom: 8px; }
+  .pole-row { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--text-dim); margin-bottom: 4px; }
+  .pole-row .active { color: var(--gold); }
+  input[type=range] { width: 100%; accent-color: var(--gold); height: 4px; }
+  .val { text-align: center; font-size: 11px; color: var(--gold-dim); margin-top: 2px; }
+  #classification { margin: 16px 0; padding: 14px; border: 1px solid var(--line);
+    background: rgba(201,164,88,0.04); border-radius: 3px; }
+  #classification .tier { font-size: 9.5px; letter-spacing: .1em; color: var(--gold-dim); text-transform: uppercase; }
+  #classification .label { font-family: 'Noto Serif JP', serif; font-size: 14px; line-height: 1.7; margin: 6px 0; }
+  #classification .note { font-size: 10.5px; color: var(--text-dim); line-height: 1.6; }
+  #swatch { width: 100%; height: 8px; border-radius: 2px; margin-top: 10px; border: 1px solid var(--line); }
+  button { width: 100%; padding: 10px; margin-top: 10px; background: transparent;
+    border: 1px solid var(--gold-dim); color: var(--gold); font-family: 'DM Mono', monospace;
+    font-size: 12px; letter-spacing: .04em; cursor: pointer; border-radius: 2px; transition: .15s; }
+  button:hover { background: rgba(201,164,88,0.1); border-color: var(--gold); }
+  button.ghost { border-color: var(--line); color: var(--text-dim); }
+  #points-list { list-style: none; padding: 0; margin: 10px 0 0; }
+  #points-list li { display: flex; align-items: center; gap: 8px; padding: 7px 0;
+    border-top: 1px solid var(--line); font-size: 10.5px; }
+  #points-list .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.2); }
+  #points-list .plabel { flex: 1; color: var(--text-dim); line-height: 1.5; }
+  #points-list .del { cursor: pointer; color: var(--text-dim); font-size: 13px; }
+  #points-list .del:hover { color: var(--gold); }
+  #legend { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; font-size: 10px; color: var(--text-dim); line-height: 1.9; }
+  #legend b { color: var(--text); font-weight: 500; }
+  #toast { position: fixed; top: 18px; left: 50%; transform: translateX(-50%) translateY(-12px);
+    background: #14120e; border: 1px solid var(--gold-dim); color: var(--gold);
+    font-family: 'Noto Serif JP', serif; font-size: 12.5px; padding: 9px 16px; border-radius: 4px;
+    z-index: 30; opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .corner-tip { position: fixed; pointer-events: none; background: #0e0e10; border: 1px solid var(--gold-dim);
+    padding: 8px 10px; font-size: 11px; max-width: 220px; line-height: 1.6; border-radius: 3px;
+    font-family: 'Noto Serif JP', serif; color: var(--text); display: none; z-index: 20; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: var(--line); }
+</style>
+</head>
+<body>
+
+<div id="scene"></div>
+<div id="corner-tip" class="corner-tip"></div>
+<div id="toast"></div>
+
+<div id="ui">
+  <div id="ui-handle"><span class="bar"></span><span class="htext">操作パネル（タップで開閉）</span></div>
+  <h1>Octant 3D MAP</h1>
+  <div class="sub">X: 富の所有権（私有 ↔ 共有）／ Y: 世界のあり方（共同体 ↔ ワンワールド）／ Z: 秩序の根拠（経験 ↔ 合理）。三軸とも連続値。ゼロ近傍は「中庸」として27セル格子で分類する。※各球点タップで説明パネルを表示</div>
+
+  <div class="axis-block">
+    <div class="axis-name">X — 富の所有権</div>
+    <div class="pole-row"><span id="x-left-label">共有</span><span id="x-right-label">私有</span></div>
+    <input type="range" id="x" min="-1" max="1" step="0.01" value="0.6">
+    <div class="val" id="x-val">+0.60</div>
+  </div>
+  <div class="axis-block">
+    <div class="axis-name">Y — 世界のあり方</div>
+    <div class="pole-row"><span id="y-left-label">共同体</span><span id="y-right-label">ワンワールド</span></div>
+    <input type="range" id="y" min="-1" max="1" step="0.01" value="-0.5">
+    <div class="val" id="y-val">-0.50</div>
+  </div>
+  <div class="axis-block">
+    <div class="axis-name">Z — 秩序の根拠</div>
+    <div class="pole-row"><span id="z-left-label">経験</span><span id="z-right-label">合理</span></div>
+    <input type="range" id="z" min="-1" max="1" step="0.01" value="-0.4">
+    <div class="val" id="z-val">-0.40</div>
+  </div>
+
+  <div id="classification">
+    <div class="tier" id="c-tier">辺（12セルのひとつ）</div>
+    <div class="label" id="c-label">—</div>
+    <div class="note" id="c-note">—</div>
+    <div id="swatch"></div>
+  </div>
+
+  <button id="add-btn">この座標に点を打つ</button>
+  <button id="clear-btn" class="ghost">すべての点を消す</button>
+
+  <ul id="points-list"></ul>
+
+  <div id="legend">
+    <b>読み方</b><br>
+    ・8頂点＝純粋な8類型（うち4類型は既定義、4類型は仮説的命名・要検討）<br>
+    ・12辺＝一軸だけ中庸、二軸が決定的な混成型<br>
+    ・6面＝二軸中庸、一軸のみが立場を決める単軸主導型<br>
+    ・中心＝三軸すべて中庸（無定型・急進的中道）<br>
+    ・色は各軸の値をR/G/B（私有→R、ワンワールド→G、合理→B）に連続マッピングした固有色。分類ラベルと独立に、位置そのものを一意に表現する。
+  </div>
+</div>
+
+<div id="labels"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const EPS = 0.15; // |value| < EPS とみなす閾値＝「中庸」
+
+// ---- 既定義4類型（ユーザー指定）＋ 仮説的4類型 ----
+const CORNER_LABELS = {
+  '1,-1,-1': { name: '伝統的保守主義／右派ナショナリズム', tentative: false,
+    note: '私有×共同体×経験。財産権を守りつつ国家・民族の伝統を重視し、歴史の知恵に従う。' },
+  '-1,1,1': { name: 'マルクス主義／共産主義／左派グローバリズム', tentative: false,
+    note: '共有×ワンワールド×合理。私有を否定し全人類の連帯を求め、科学的社会設計を信じる。' },
+  '1,1,1': { name: 'リバタリアニズム／新自由主義', tentative: false,
+    note: '私有×ワンワールド×合理。個人の自由と市場、国境なき経済、合理的選択を追求する。' },
+  '-1,-1,-1': { name: 'コミュニタリアニズムの一部／地域社会主義', tentative: false,
+    note: '共有×共同体×経験。富を地域で分かち合い、身近な伝統に根ざし、過度な近代化に抵抗する。' },
+  '1,-1,1': { name: '（仮）国家主導型資本主義', tentative: true,
+    note: '私有×共同体×合理。私有制と共同体的凝集を保ちながら、合理的な国家設計で近代化を進める立場（開発主義型資本主義に近い）。' },
+  '-1,1,-1': { name: '（仮）自生的国際連帯主義', tentative: true,
+    note: '共有×ワンワールド×経験。理論設計によらず、慣習や相互扶助の蓄積から国境を超えた共有を志向する立場。' },
+  '1,1,-1': { name: '（仮）自生的秩序グローバリズム', tentative: true,
+    note: '私有×ワンワールド×経験。ハイエク的な自生的秩序観を国境を越えて適用し、私有と自由な交換を支持する立場。' },
+  '-1,-1,1': { name: '（仮）一国計画社会主義', tentative: true,
+    note: '共有×共同体×合理。一つの共同体・国家の内部で、合理的な計画によって富を共有する立場。' },
+};
+
+const POLE = {
+  x: { neg: '共有', pos: '私有' },
+  y: { neg: '共同体', pos: 'ワンワールド' },
+  z: { neg: '経験', pos: '合理' },
+};
+
+function sign(v) { return v > EPS ? 1 : v < -EPS ? -1 : 0; }
+
+function classify(x, y, z) {
+  const sx = sign(x), sy = sign(y), sz = sign(z);
+  const zeros = [sx, sy, sz].filter(s => s === 0).length;
+  const poleText = (axis, s) => s === 0 ? `${POLE[axis].neg}=${POLE[axis].pos}（中庸）` : (s === 1 ? POLE[axis].pos : POLE[axis].neg);
+  const parts = [poleText('x', sx), poleText('y', sy), poleText('z', sz)];
+
+  if (zeros === 0) {
+    const key = `${sx},${sy},${sz}`;
+    const def = CORNER_LABELS[key];
+    return {
+      tier: '頂点（8類型のひとつ）',
+      label: def ? def.name + (def.tentative ? '　※仮説的命名' : '') : parts.join(' × '),
+      note: def ? def.note : parts.join(' × '),
+    };
+  }
+  if (zeros === 1) {
+    return { tier: '辺（12セルのひとつ）— 一軸中庸の混成型', label: parts.join(' × '),
+      note: 'いずれか一軸で立場を決めかね、他二軸では明確な立場を持つ状態。' };
+  }
+  if (zeros === 2) {
+    return { tier: '面（6セルのひとつ）— 単軸主導型', label: parts.join(' × '),
+      note: '二軸は中庸で、一軸のみが立場を決定づけている状態。' };
+  }
+  return { tier: '中心 — 無定型', label: '三軸すべて中庸',
+    note: '急進的中道、あるいは政治的無立場・無関心として読める座標。' };
+}
+
+function colorFor(x, y, z) {
+  const r = (x + 1) / 2, g = (y + 1) / 2, b = (z + 1) / 2;
+  return new THREE.Color(r, g, b);
+}
+
+// ---------------- Three.js scene ----------------
+const container = document.getElementById('scene');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0a0c);
+scene.fog = new THREE.FogExp2(0x0a0a0c, 0.045);
+
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.domElement.style.touchAction = 'none';
+container.appendChild(renderer.domElement);
+
+// ---- hand-rolled orbit control (no external addon needed) ----
+let radius = 5.6, theta = Math.PI * 0.28, phi = Math.PI * 0.35;
+const MIN_PHI = 0.12, MAX_PHI = Math.PI - 0.12;
+function applyCamera() {
+  const p = Math.max(MIN_PHI, Math.min(MAX_PHI, phi));
+  camera.position.set(
+    radius * Math.sin(p) * Math.sin(theta),
+    radius * Math.cos(p),
+    radius * Math.sin(p) * Math.cos(theta)
+  );
+  camera.lookAt(0, 0, 0);
+}
+applyCamera();
+
+let dragging = false, lastX = 0, lastY = 0, downX = 0, downY = 0;
+const dom = renderer.domElement;
+dom.addEventListener('pointerdown', (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; downX = e.clientX; downY = e.clientY; dom.setPointerCapture(e.pointerId); });
+dom.addEventListener('pointerup', (e) => {
+  dragging = false;
+  const moved = Math.hypot(e.clientX - downX, e.clientY - downY);
+  if (moved < 8) checkCornerHover(e.clientX, e.clientY); // タップ＝ドラッグでない操作として頂点判定
+});
+dom.addEventListener('pointercancel', () => { dragging = false; });
+dom.addEventListener('pointermove', (e) => {
+  if (!dragging) return;
+  const dx = e.clientX - lastX, dy = e.clientY - lastY;
+  lastX = e.clientX; lastY = e.clientY;
+  theta -= dx * 0.006;
+  phi -= dy * 0.006;
+  applyCamera();
+});
+dom.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  radius = Math.max(2.2, Math.min(14, radius + e.deltaY * 0.0035));
+  applyCamera();
+}, { passive: false });
+
+// pinch-to-zoom for touch
+let pinchDist = null;
+dom.addEventListener('touchstart', (e) => { if (e.touches.length === 2) pinchDist = dist2(e.touches[0], e.touches[1]); }, { passive: true });
+dom.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 2) {
+    const d = dist2(e.touches[0], e.touches[1]);
+    if (pinchDist) {
+      radius = Math.max(2.2, Math.min(14, radius - (d - pinchDist) * 0.012));
+      applyCamera();
+    }
+    pinchDist = d;
+  }
+}, { passive: true });
+dom.addEventListener('touchend', (e) => { if (e.touches.length < 2) pinchDist = null; }, { passive: true });
+function dist2(a, b) { return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); }
+
+scene.add(new THREE.AmbientLight(0xfff2dc, 0.9));
+const keyLight = new THREE.DirectionalLight(0xffe8c0, 0.6);
+keyLight.position.set(4, 5, 3);
+scene.add(keyLight);
+
+// cube wireframe
+const cubeGeo = new THREE.BoxGeometry(2, 2, 2);
+const edgesGeo = new THREE.EdgesGeometry(cubeGeo);
+const cubeLines = new THREE.LineSegments(edgesGeo, new THREE.LineBasicMaterial({ color: 0x3a3428, transparent: true, opacity: 0.6 }));
+scene.add(cubeLines);
+
+// 27-cell guide grid (subtle)
+function addGuidePlane(axis, at) {
+  const geo = new THREE.PlaneGeometry(2, 2);
+  const mat = new THREE.MeshBasicMaterial({ color: 0x1a1712, transparent: true, opacity: 0.15, side: THREE.DoubleSide, depthWrite: false });
+  const plane = new THREE.Mesh(geo, mat);
+  if (axis === 'x') { plane.rotation.y = Math.PI / 2; plane.position.x = at; }
+  if (axis === 'y') { plane.rotation.x = Math.PI / 2; plane.position.y = at; }
+  if (axis === 'z') { plane.position.z = at; }
+  scene.add(plane);
+}
+[-1 / 3, 1 / 3].forEach(v => { addGuidePlane('x', v); addGuidePlane('y', v); addGuidePlane('z', v); });
+
+// axis lines through center, gold accent
+function axisLine(dir) {
+  const geo = new THREE.BufferGeometry().setFromPoints([dir.clone().multiplyScalar(-1.15), dir.clone().multiplyScalar(1.15)]);
+  const mat = new THREE.LineBasicMaterial({ color: 0x8a6f3a, transparent: true, opacity: 0.5 });
+  scene.add(new THREE.Line(geo, mat));
+}
+axisLine(new THREE.Vector3(1, 0, 0));
+axisLine(new THREE.Vector3(0, 1, 0));
+axisLine(new THREE.Vector3(0, 0, 1));
+
+// ---- plain-DOM labels (projected manually each frame; no CSS2DRenderer needed) ----
+const labelsContainer = document.getElementById('labels');
+const projectedLabels = [];
+function makeLabel(text, pos, big) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  div.style.position = 'absolute';
+  div.style.transform = 'translate(-50%, -50%)';
+  div.style.fontFamily = "'Noto Serif JP', serif";
+  div.style.fontSize = big ? '12px' : '9px';
+  div.style.color = big ? '#c9a458' : '#8a8578';
+  div.style.whiteSpace = 'nowrap';
+  div.style.textShadow = '0 0 6px #0a0a0c, 0 0 6px #0a0a0c, 0 0 6px #0a0a0c';
+  div.style.pointerEvents = 'none';
+  labelsContainer.appendChild(div);
+  projectedLabels.push({ div, pos });
+}
+makeLabel('私有 +X', new THREE.Vector3(1.25, 0, 0), true);
+makeLabel('共有 -X', new THREE.Vector3(-1.25, 0, 0), true);
+makeLabel('ワンワールド +Y', new THREE.Vector3(0, 1.25, 0), true);
+makeLabel('共同体 -Y', new THREE.Vector3(0, -1.25, 0), true);
+makeLabel('合理 +Z', new THREE.Vector3(0, 0, 1.25), true);
+makeLabel('経験 -Z', new THREE.Vector3(0, 0, -1.25), true);
+
+function updateLabelPositions() {
+  const halfW = window.innerWidth / 2, halfH = window.innerHeight / 2;
+  projectedLabels.forEach(({ div, pos }) => {
+    const v = pos.clone().project(camera);
+    const behind = v.z > 1;
+    div.style.display = behind ? 'none' : 'block';
+    div.style.left = (v.x * halfW + halfW) + 'px';
+    div.style.top = (-v.y * halfH + halfH) + 'px';
+  });
+}
+
+// corner markers with tooltips
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+const cornerMeshes = [];
+[-1, 1].forEach(cx => [-1, 1].forEach(cy => [-1, 1].forEach(cz => {
+  const geo = new THREE.SphereGeometry(0.055, 16, 16);
+  const c = colorFor(cx, cy, cz);
+  const mat = new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.3 });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(cx, cy, cz);
+  const def = CORNER_LABELS[`${cx},${cy},${cz}`];
+  mesh.userData.tip = def.name + (def.tentative ? '（仮説的命名）' : '') + '\n' + def.note;
+  scene.add(mesh);
+  cornerMeshes.push(mesh);
+})));
+
+// center marker
+const centerGeo = new THREE.SphereGeometry(0.035, 12, 12);
+const centerMat = new THREE.MeshBasicMaterial({ color: 0x555045 });
+scene.add(new THREE.Mesh(centerGeo, centerMat));
+
+// live cursor point — wireframe + no depth-write, so it never visually swallows placed points
+const cursorGeo = new THREE.SphereGeometry(0.075, 16, 12);
+const cursorMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.85, depthWrite: false });
+const cursor = new THREE.Mesh(cursorGeo, cursorMat);
+scene.add(cursor);
+
+// placed points storage
+const placedPoints = [];
+
+function updateCursor() {
+  const x = parseFloat(document.getElementById('x').value);
+  const y = parseFloat(document.getElementById('y').value);
+  const z = parseFloat(document.getElementById('z').value);
+  cursor.position.set(x, y, z);
+  const c = colorFor(x, y, z);
+  cursor.material.color = c;
+
+  document.getElementById('x-val').textContent = (x >= 0 ? '+' : '') + x.toFixed(2);
+  document.getElementById('y-val').textContent = (y >= 0 ? '+' : '') + y.toFixed(2);
+  document.getElementById('z-val').textContent = (z >= 0 ? '+' : '') + z.toFixed(2);
+
+  ['x-left-label', 'y-left-label', 'z-left-label'].forEach(id => document.getElementById(id).classList.remove('active'));
+  ['x-right-label', 'y-right-label', 'z-right-label'].forEach(id => document.getElementById(id).classList.remove('active'));
+  if (sign(x) === 1) document.getElementById('x-right-label').classList.add('active');
+  if (sign(x) === -1) document.getElementById('x-left-label').classList.add('active');
+  if (sign(y) === 1) document.getElementById('y-right-label').classList.add('active');
+  if (sign(y) === -1) document.getElementById('y-left-label').classList.add('active');
+  if (sign(z) === 1) document.getElementById('z-right-label').classList.add('active');
+  if (sign(z) === -1) document.getElementById('z-left-label').classList.add('active');
+
+  const cls = classify(x, y, z);
+  document.getElementById('c-tier').textContent = cls.tier;
+  document.getElementById('c-label').textContent = cls.label;
+  document.getElementById('c-note').textContent = cls.note;
+  document.getElementById('swatch').style.background = `#${c.getHexString()}`;
+}
+['x', 'y', 'z'].forEach(id => document.getElementById(id).addEventListener('input', updateCursor));
+updateCursor();
+
+function renderPointsList() {
+  const ul = document.getElementById('points-list');
+  ul.innerHTML = '';
+  placedPoints.forEach((p, i) => {
+    const li = document.createElement('li');
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    dot.style.background = `#${p.color.getHexString()}`;
+    const label = document.createElement('span');
+    label.className = 'plabel';
+    label.textContent = `(${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)}) ${p.cls.label}`;
+    const del = document.createElement('span');
+    del.className = 'del';
+    del.textContent = '✕';
+    del.onclick = () => {
+      scene.remove(p.mesh);
+      placedPoints.splice(i, 1);
+      renderPointsList();
+    };
+    li.append(dot, label, del);
+    ul.appendChild(li);
+  });
+}
+
+document.getElementById('add-btn').addEventListener('click', () => {
+  const x = parseFloat(document.getElementById('x').value);
+  const y = parseFloat(document.getElementById('y').value);
+  const z = parseFloat(document.getElementById('z').value);
+  const c = colorFor(x, y, z);
+  const geo = new THREE.SphereGeometry(0.06, 16, 16);
+  const mat = new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.5 });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, y, z);
+  scene.add(mesh);
+  placedPoints.push({ x, y, z, color: c, mesh, cls: classify(x, y, z) });
+  renderPointsList();
+  showToast(`点を追加しました（${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}）`);
+});
+
+document.getElementById('clear-btn').addEventListener('click', () => {
+  placedPoints.forEach(p => scene.remove(p.mesh));
+  placedPoints.length = 0;
+  renderPointsList();
+  showToast('すべての点を削除しました');
+});
+
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// tooltip on corner hover/tap
+const tip = document.getElementById('corner-tip');
+function checkCornerHover(clientX, clientY) {
+  mouse.x = (clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(cornerMeshes);
+  if (hits.length) {
+    tip.style.display = 'block';
+    tip.style.left = Math.min(clientX + 14, window.innerWidth - 236) + 'px';
+    tip.style.top = (clientY + 14) + 'px';
+    tip.textContent = hits[0].object.userData.tip;
+  } else {
+    tip.style.display = 'none';
+  }
+}
+window.addEventListener('pointermove', (e) => { if (!dragging) checkCornerHover(e.clientX, e.clientY); });
+
+document.getElementById('ui-handle').addEventListener('click', () => {
+  document.getElementById('ui').classList.toggle('open');
+});
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+function animate() {
+  requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+  updateLabelPositions();
+}
+animate();
+</script>
+</body>
+</html>
