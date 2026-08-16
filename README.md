@@ -1,7 +1,7 @@
 [![License](https://img.shields.io/github/license/24-blog/lsc)](LICENSE)
 
 
-## 基本設計
+## 基本設計（右手系）
 X 富の所有権はだれにあるか<br>
 Y 世界はどのようにあるべき<br>
 Z 秩序の根拠をどこへ置くか<br>
