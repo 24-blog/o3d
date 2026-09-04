@@ -35,6 +35,9 @@ Z 秩序の根拠をどこへ置くか<br>
 ・共同体主義<br>
 ・地域社会主義
 
+## メタ軸マトリクスについて
+[メタ軸マトリクス](meta-matrix.html)
+
 
 ⚠️COPYRIGHT<br>
 Textual commentary written by the repository owner is
