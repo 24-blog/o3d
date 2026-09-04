@@ -36,7 +36,7 @@ Z 秩序の根拠をどこへ置くか<br>
 ・地域社会主義
 
 ## メタ軸マトリクスについて
-[メタ軸マトリクス](meta-matrix.html)
+[メタ軸マトリクス](https://24-blog.github.io/o3d/meta-matrix.html)
 
 
 ⚠️COPYRIGHT<br>
