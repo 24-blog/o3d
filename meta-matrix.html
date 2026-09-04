@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>本質主義⇄構築主義 メタ軸マトリクス</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;700&family=Noto+Sans+JP:wght@300;400;500&display=swap');
+
+  :root{
+    --bg: #0e1013;
+    --panel: #16191f;
+    --panel-line: #262a33;
+    --text: #e7e5df;
+    --muted: #8b8d92;
+    --essential: #c9a24b;
+    --constructed: #4d8fae;
+    --cross: #3a3d44;
+  }
+
+  *{ box-sizing: border-box; }
+
+  html, body{
+    margin:0;
+    padding:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 300;
+  }
+
+  body{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding: 48px 20px 72px;
+  }
+
+  header{
+    max-width: 720px;
+    text-align:center;
+    margin-bottom: 44px;
+  }
+
+  h1{
+    font-family:'Noto Serif JP', serif;
+    font-weight:700;
+    font-size: 1.6rem;
+    letter-spacing: .04em;
+    margin: 0 0 14px;
+  }
+
+  header p{
+    font-size: .92rem;
+    line-height: 1.9;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  .stage{
+    position: relative;
+    width: min(880px, 94vw);
+    aspect-ratio: 1 / 1;
+    max-height: 720px;
+  }
+
+  .axis-label{
+    position:absolute;
+    font-family:'Noto Serif JP', serif;
+    font-size: .95rem;
+    letter-spacing: .08em;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .axis-top{ top:0; left:50%; transform:translate(-50%,-4px); color: var(--essential); }
+  .axis-bottom{ bottom:0; left:50%; transform:translate(-50%,4px); color: var(--constructed); }
+  .axis-left{ top:50%; left:0; transform:translate(0,-50%); }
+  .axis-right{ top:50%; right:0; transform:translate(0,-50%); text-align:right; }
+
+  .cross-v{
+    position:absolute; left:50%; top:8%; bottom:8%;
+    width:1px; background: var(--cross); transform: translateX(-50%);
+  }
+  .cross-h{
+    position:absolute; top:50%; left:8%; right:8%;
+    height:1px; background: var(--cross); transform: translateY(-50%);
+  }
+
+  .grid{
+    position:absolute;
+    inset: 15% 6%;
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 22px;
+  }
+
+  .card{
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    border-radius: 3px;
+    padding: 20px 22px;
+    display:flex;
+    flex-direction:column;
+    gap: 10px;
+    position:relative;
+    overflow:hidden;
+  }
+
+  .card::before{
+    content:'';
+    position:absolute;
+    top:0; left:0; right:0;
+    height: 3px;
+  }
+  .card.q-ec::before, .card.q-ew::before{ background: var(--essential); }
+  .card.q-cc::before, .card.q-cw::before{ background: var(--constructed); }
+
+  .card h2{
+    font-family:'Noto Serif JP', serif;
+    font-weight:500;
+    font-size: 1rem;
+    margin:0;
+    line-height:1.5;
+  }
+
+  .card .schools{
+    font-size: .8rem;
+    color: var(--muted);
+    line-height: 1.9;
+  }
+
+  .card p{
+    margin:0;
+    font-size: .82rem;
+    line-height: 1.85;
+    color: #c7c5be;
+  }
+
+  footer{
+    max-width: 720px;
+    margin-top: 40px;
+    font-size: .8rem;
+    line-height: 2;
+    color: var(--muted);
+    border-top: 1px solid var(--panel-line);
+    padding-top: 24px;
+  }
+
+  footer strong{ color: var(--text); font-weight:500; }
+
+  @media (max-width: 640px){
+    .stage{ aspect-ratio: unset; height: auto; }
+    .grid{ position:static; inset:auto; margin-top: 40px; }
+    .cross-v, .cross-h, .axis-label{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>本質主義 ⇄ 構築主義 ― 独立メタ軸</h1>
+  <p>
+    X（私有⇄共有）・Y（共同体⇄ワンワールド）・Z（経験主義⇄合理主義）の3軸とは異なる次元。
+    「秩序の妥当範囲」を問うYとは独立して、「その範囲を区切るカテゴリーが自然的所与か歴史的構築物か」を問う。
+    ゆえにYの一点として位置づけることはできず、各象限に既存の政治的立場が分岐して現れる。
+  </p>
+</header>
+
+<div class="stage">
+  <div class="cross-v"></div>
+  <div class="cross-h"></div>
+  <div class="axis-label axis-top">本質主義</div>
+  <div class="axis-label axis-bottom">構築主義</div>
+  <div class="axis-label axis-left">共同体</div>
+  <div class="axis-label axis-right">ワンワールド</div>
+
+  <div class="grid">
+    <div class="card q-ec">
+      <h2>本質主義 × 共同体</h2>
+      <div class="schools">エスノナショナリズム／血統・土地の民族論</div>
+      <p>民族・国民を自然的・不易な実体とみなし、その固有性の保持を秩序の基盤に置く。</p>
+    </div>
+
+    <div class="card q-ew">
+      <h2>本質主義 × ワンワールド</h2>
+      <div class="schools">カント的コスモポリタニズム／自然法的人権論</div>
+      <p>個別集団ではなく「人間性」そのものを普遍的本質として措定し、そこから世界市民的連帯を導く。</p>
+    </div>
+
+    <div class="card q-cc">
+      <h2>構築主義 × 共同体</h2>
+      <div class="schools">アンダーソン「想像の共同体」論</div>
+      <p>国民は歴史的・言説的構築物と認めつつ、実践的・戦略的にその単位を維持・再生産する立場。</p>
+    </div>
+
+    <div class="card q-cw">
+      <h2>構築主義 × ワンワールド</h2>
+      <div class="schools">ポスト構造主義的国境脱自然化論</div>
+      <p>国境や国籍を構築物として相対化し、その解体・再編を通じて世界的連帯を志向する。</p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <strong>本図の位置づけ</strong>：この2×2はY軸の代替ではなく、Y軸上の同一座標が異なる認識論的基盤を持ちうることを示す注釈図である。
+  本体の3Dオクタントマップ上では、各ノードの本質主義／構築主義的性格を、点の輪郭（実線＝本質主義／破線＝構築主義）などの別レイヤーとして重ねることを想定する。
+</footer>
+
+</body>
+</html>
