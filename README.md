@@ -1,4 +1,4 @@
-[![License](https://img.shields.io/github/license/24-blog/lsc)](LICENSE)
+[![License](https://img.shields.io/github/license/24-blog/o3d)](LICENSE)
 
 
 ## 基本設計（右手系座標）
